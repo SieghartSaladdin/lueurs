@@ -41,14 +41,18 @@ export default function AddressSection({ addresses }: { addresses: any[] }) {
 
   const confirmDelete = (id: string) => {
     confirmDialog({
-      message: 'Are you sure you want to delete this address?',
-      header: 'Delete Confirmation',
-      icon: 'pi pi-exclamation-triangle',
-      acceptClassName: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-600 border border-transparent px-4 py-2 rounded-md text-sm font-medium transition duration-200 ease-in-out',
-      rejectClassName: 'bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-500 px-4 py-2 rounded-md text-sm font-medium transition duration-200 ease-in-out',
-      accept: () => handleDelete(id),
+        message: 'Are you sure you want to delete this address?',
+        header: 'Delete Confirmation',
+        icon: 'pi pi-exclamation-triangle',
+        accept: () => handleDelete(id),
+        style: { width: '400px' }, // 👈 atur width di sini
+        pt: {
+            content: { 
+                className: 'flex items-center !px-6 !py-6 !bg-white text-gray-700' 
+            }
+        }
     });
-  };
+};
 
   return (
     <section id="addresses" className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">

@@ -43,33 +43,6 @@ const CustomTailwind = {
       className: 'flex-1 font-medium'
     }
   },
-  dialog: {
-    ...Tailwind.dialog,
-    root: {
-      className: twMerge(
-        'bg-white rounded-xl shadow-xl border border-gray-100',
-        'transform scale-100 m-0 w-full max-w-md'
-      )
-    },
-    header: {
-      className: 'flex items-center justify-between shrink-0 px-6 py-4 border-b border-gray-100 bg-white text-black rounded-t-xl'
-    },
-    headerTitle: {
-      className: 'font-display font-bold text-xl'
-    },
-    content: {
-      className: 'overflow-y-auto px-6 py-6 bg-white text-gray-700'
-    },
-    footer: {
-      className: 'shrink-0 px-6 py-4 border-t border-gray-100 bg-white text-right rounded-b-xl'
-    },
-    mask: {
-      className: 'transition-all duration-200 bg-black/50 backdrop-blur-sm'
-    },
-    closeButton: {
-      className: 'flex items-center justify-center overflow-hidden relative w-8 h-8 text-gray-500 border-0 bg-transparent rounded-full transition duration-200 ease-in-out hover:text-black hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-black'
-    }
-  },
   inputtext: {
     ...Tailwind.inputtext,
     root: ({ props, context }: any) => ({
@@ -107,39 +80,6 @@ const CustomTailwind = {
       )
     })
   },
-  confirmdialog: {
-    ...Tailwind.confirmdialog,
-    root: {
-      className: twMerge(
-        'bg-white rounded-xl shadow-xl border border-gray-100',
-        'transform scale-100 m-0 w-full max-w-md'
-      )
-    },
-    header: {
-      className: 'flex items-center justify-between shrink-0 px-6 py-4 border-b border-gray-100 bg-white text-black rounded-t-xl'
-    },
-    headerTitle: {
-      className: 'font-display font-bold text-xl'
-    },
-    content: {
-      className: 'overflow-y-auto px-6 py-6 bg-white text-gray-700 flex items-center gap-4'
-    },
-    icon: {
-      className: 'text-2xl text-amber-500'
-    },
-    message: {
-      className: 'm-0 text-gray-700'
-    },
-    footer: {
-      className: 'shrink-0 px-6 py-4 border-t border-gray-100 bg-white text-right rounded-b-xl flex justify-end gap-2'
-    },
-    mask: {
-      className: 'transition-all duration-200 bg-black/50 backdrop-blur-sm'
-    },
-    closeButton: {
-      className: 'flex items-center justify-center overflow-hidden relative w-8 h-8 text-gray-500 border-0 bg-transparent rounded-full transition duration-200 ease-in-out hover:text-black hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-black'
-    }
-  }
 };
 
 export default function Providers({ children }: { children: React.ReactNode }) {
