@@ -1,0 +1,208 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  password      String?
+  role          Role      @default(CUSTOMER)
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  addresses     Address[]
+  orders        Order[]
+  cartItems     CartItem[]
+  reviews       Review[]
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?  @db.Text
+  access_token       String?  @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?  @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  ADMIN
+  CUSTOMER
+}
+
+model Address {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  street      String
+  cityId      String   // ID Kota dari RajaOngkir
+  cityName    String
+  provinceId  String   // ID Provinsi dari RajaOngkir
+  provinceName String
+  postalCode  String
+  isDefault   Boolean  @default(false)
+}
+
+// --- PRODUCT MANAGEMENT (PERFUME SPECIFIC) ---
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique // e.g., Floral, Woody, Oriental, Fresh
+  slug        String    @unique
+  products    Product[]
+}
+
+model Product {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String    @db.Text
+  perfumeType String    // e.g., Eau de Parfum, Extrait de Parfum, Cologne
+  
+  // Olfactory Pyramid (Piramida Aroma)
+  topNotes    String    // e.g., "Bergamot, Lemon, Pink Pepper"
+  middleNotes String    // e.g., "Rose, Jasmine, Ylang-Ylang"
+  baseNotes   String    // e.g., "Vanilla, Musk, Sandalwood"
+  
+  images      String[]  // Array URL gambar
+  categoryId  String
+  category    Category  @relation(fields: [categoryId], references: [id])
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  variants    ProductVariant[]
+  reviews     Review[]
+}
+
+// Tabel Varian untuk Ukuran Botol (5ml, 50ml, 100ml)
+model ProductVariant {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  volume      Int       // Volume dalam ml (e.g., 5, 50, 100)
+  price       Decimal   @db.Decimal(10, 2)
+  stock       Int       @default(0)
+  weight      Int       // Berat kotor dalam gram (Botol + Cairan + Packaging) untuk RajaOngkir
+  sku         String?   @unique
+  
+  cartItems   CartItem[]
+  orderItems  OrderItem[]
+}
+
+// --- REVIEWS & RATINGS ---
+model Review {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  rating      Int       // 1-5 stars
+  longevity   Int?      // Rating spesifik ketahanan (1-5)
+  sillage     Int?      // Rating spesifik jejak aroma (1-5)
+  comment     String?   @db.Text
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([userId, productId]) // Satu user hanya bisa review satu produk 1 kali
+}
+
+// --- SHOPPING CART ---
+model CartItem {
+  id        String         @id @default(cuid())
+  userId    String
+  user      User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  quantity  Int            @default(1)
+
+  @@unique([userId, variantId])
+}
+
+// --- ORDER & PAYMENT ---
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  user            User        @relation(fields: [userId], references: [id])
+  status          OrderStatus @default(PENDING)
+  
+  // Pengiriman
+  shippingCost    Decimal     @db.Decimal(10, 2)
+  courier         String      // JNE, POS, TIKI
+  trackingNumber  String?
+  shippingAddress Json        // Simpan snapshot alamat saat checkout
+
+  // Pembayaran
+  totalAmount     Decimal     @db.Decimal(10, 2) // Subtotal + Ongkir
+  paymentMethod   String?
+  paymentStatus   PaymentStatus @default(UNPAID)
+  midtransOrderId String?     @unique // ID Order untuk Midtrans
+  
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  items           OrderItem[]
+}
+
+model OrderItem {
+  id        String         @id @default(cuid())
+  orderId   String
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId String
+  variant   ProductVariant @relation(fields: [variantId], references: [id])
+  quantity  Int
+  price     Decimal        @db.Decimal(10, 2) // Harga saat dibeli (snapshot)
+}
+
+enum OrderStatus {
+  PENDING
+  PROCESSING
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentStatus {
+  UNPAID
+  PAID
+  FAILED
+  EXPIRED
+}
