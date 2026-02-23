@@ -8,6 +8,7 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Checkbox } from "primereact/checkbox";
+import { Dropdown } from "primereact/dropdown";
 
 interface AddressModalProps {
   isOpen: boolean;
@@ -18,44 +19,119 @@ interface AddressModalProps {
 export default function AddressModal({ isOpen, onClose, addressToEdit }: AddressModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [provinces, setProvinces] = useState<any[]>([]);
+  const [cities, setCities] = useState<any[]>([]);
+  
   const [formData, setFormData] = useState({
     street: "",
-    cityName: "",
+    provinceId: "",
     provinceName: "",
+    cityId: "",
+    cityName: "",
     postalCode: "",
     isDefault: false,
   });
 
   useEffect(() => {
+    if (isOpen) {
+      fetchProvinces();
+    }
+  }, [isOpen]);
+
+  const fetchProvinces = async () => {
+    try {
+      const res = await fetch("/api/shipping/provinces");
+      if (res.ok) {
+        const data = await res.json();
+        setProvinces(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch provinces", error);
+    }
+  };
+
+  const fetchCities = async (provinceId: string) => {
+    try {
+      const res = await fetch(`/api/shipping/cities?province=${provinceId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setCities(data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch cities", error);
+    }
+  };
+
+  useEffect(() => {
+    if (formData.provinceId) {
+      fetchCities(formData.provinceId);
+    } else {
+      setCities([]);
+    }
+  }, [formData.provinceId]);
+
+  useEffect(() => {
     if (addressToEdit) {
       setFormData({
         street: addressToEdit.street || "",
-        cityName: addressToEdit.cityName || "",
+        provinceId: String(addressToEdit.provinceId) || "",
         provinceName: addressToEdit.provinceName || "",
+        cityId: String(addressToEdit.cityId) || "",
+        cityName: addressToEdit.cityName || "",
         postalCode: addressToEdit.postalCode || "",
         isDefault: addressToEdit.isDefault || false,
       });
     } else {
       setFormData({
         street: "",
-        cityName: "",
+        provinceId: "",
         provinceName: "",
+        cityId: "",
+        cityName: "",
         postalCode: "",
         isDefault: false,
       });
     }
   }, [addressToEdit, isOpen]);
 
+  const handleProvinceChange = (e: any) => {
+    const selectedProvince = provinces.find(p => String(p.id) === String(e.value));
+    setFormData({
+      ...formData,
+      provinceId: String(e.value),
+      provinceName: selectedProvince ? selectedProvince.name : "",
+      cityId: "",
+      cityName: "",
+    });
+  };
+
+  const handleCityChange = (e: any) => {
+    const selectedCity = cities.find(c => String(c.id) === String(e.value));
+    setFormData({
+      ...formData,
+      cityId: String(e.value),
+      cityName: selectedCity ? selectedCity.name : "",
+      // If postal code is not provided by the API, keep the existing one
+      postalCode: selectedCity?.postal_code || formData.postalCode,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.street || !formData.provinceId || !formData.cityId || !formData.postalCode) {
+      toast.error("Please fill all required fields");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const url = "/api/user/address";
       const method = addressToEdit ? "PUT" : "POST";
       const body = addressToEdit 
-        ? { ...formData, id: addressToEdit.id, cityId: "1", provinceId: "1" }
-        : { ...formData, cityId: "1", provinceId: "1" };
+        ? { ...formData, id: addressToEdit.id }
+        : { ...formData };
 
       const res = await fetch(url, {
         method,
@@ -110,31 +186,44 @@ export default function AddressModal({ isOpen, onClose, addressToEdit }: Address
         
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="cityName" className="text-sm font-medium text-gray-700">City</label>
-            <InputText
-              id="cityName"
-              type="text"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
-              placeholder="Jakarta Selatan"
-              value={formData.cityName}
-              onChange={(e) => setFormData({ ...formData, cityName: e.target.value })}
+            <label htmlFor="provinceId" className="text-sm font-medium text-gray-700">Province</label>
+            <Dropdown
+              id="provinceId"
+              value={formData.provinceId ? Number(formData.provinceId) : null}
+              onChange={handleProvinceChange}
+              options={provinces}
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select a Province"
+              filter
+              className="w-full border border-gray-300 rounded-md"
+              pt={{
+                input: { className: 'px-3 py-2' },
+                trigger: { className: 'px-3' }
+              }}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="provinceName" className="text-sm font-medium text-gray-700">Province</label>
-            <InputText
-              id="provinceName"
-              type="text"
-              required
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
-              placeholder="DKI Jakarta"
-              value={formData.provinceName}
-              onChange={(e) => setFormData({ ...formData, provinceName: e.target.value })}
+            <label htmlFor="cityId" className="text-sm font-medium text-gray-700">City</label>
+            <Dropdown
+              id="cityId"
+              value={formData.cityId ? Number(formData.cityId) : null}
+              onChange={handleCityChange}
+              options={cities}
+              optionLabel="name"
+              optionValue="id"
+              placeholder="Select a City"
+              filter
+              disabled={!formData.provinceId}
+              className="w-full border border-gray-300 rounded-md"
+              pt={{
+                input: { className: 'px-3 py-2' },
+                trigger: { className: 'px-3' }
+              }}
             />
           </div>
         </div>
-        
+
         <div className="flex flex-col gap-2">
           <label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</label>
           <InputText

@@ -5,6 +5,8 @@ import { prisma } from "@/app/lib/prisma";
 import AddressSection from "./components/AddressSection";
 import { Button } from 'primereact/button';
 
+import { formatCurrency } from "@/app/lib/utils";
+
 export default async function ProfilePage() {
   const session = await getServerSession(authOptions);
 
@@ -96,7 +98,7 @@ export default async function ProfilePage() {
                         <p className="text-sm text-gray-500">{new Date(order.createdAt).toLocaleDateString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="font-bold">Rp {Number(order.totalAmount).toLocaleString('id-ID')}</p>
+                        <p className="font-bold">{formatCurrency(Number(order.totalAmount))}</p>
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                           {order.status}
                         </span>
@@ -115,7 +117,7 @@ export default async function ProfilePage() {
                             <p className="text-sm text-gray-500">{item.variant.volume}ml x {item.quantity}</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-medium">Rp {Number(item.price).toLocaleString('id-ID')}</p>
+                            <p className="font-medium">{formatCurrency(Number(item.price))}</p>
                           </div>
                         </div>
                       ))}

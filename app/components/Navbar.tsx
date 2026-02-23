@@ -2,16 +2,23 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import toast from "react-hot-toast";
+import { useCartStore } from "@/app/lib/store/cart";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const router = useRouter();
   const { data: session } = useSession();
+  const cartItems = useCartStore((state) => state.items);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     const handleScroll = () => {
       if (window.scrollY > 50) {
         setIsScrolled(true);
@@ -50,45 +57,59 @@ export default function Navbar() {
 
         {/* Desktop Menu */}
         <div className="hidden md:flex space-x-8 font-medium text-xs uppercase tracking-widest text-gray-500">
-          <Link href="#" className="hover:text-black transition-colors">
-            New Arrivals
+          <Link href="/products" className="hover:text-black transition-colors">
+            All Fragrances
           </Link>
-          <Link href="#" className="hover:text-black transition-colors">
-            Women
+          <Link href="/products?category=floral" className="hover:text-black transition-colors">
+            Floral
           </Link>
-          <Link href="#" className="hover:text-black transition-colors">
-            Men
+          <Link href="/products?category=woody" className="hover:text-black transition-colors">
+            Woody
           </Link>
-          <Link href="#" className="hover:text-black transition-colors">
-            Home Scents
+          <Link href="/products?category=fresh" className="hover:text-black transition-colors">
+            Fresh
           </Link>
           <Link
-            href="#"
+            href="/products?category=oriental"
             className="text-amber-700 hover:text-amber-900 transition-colors border-b border-transparent hover:border-amber-700"
           >
-            Gifts
+            Oriental
           </Link>
         </div>
 
         {/* Right Icons */}
         <div className="flex items-center space-x-6">
-          <div className="relative hidden md:block">
+          <form 
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (searchQuery.trim()) {
+                router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+              }
+            }}
+            className="relative hidden md:block"
+          >
             <input
               type="text"
               placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="bg-gray-50 border border-transparent focus:border-gray-200 rounded-full py-2 px-4 pl-10 w-44 focus:w-64 transition-all duration-300 outline-none text-sm font-light"
             />
-            <i className="fas fa-search absolute left-3 top-3 text-gray-300 text-sm"></i>
-          </div>
+            <button type="submit" className="absolute left-3 top-2.5">
+              <i className="fas fa-search text-gray-300 text-sm hover:text-amber-700 transition-colors"></i>
+            </button>
+          </form>
           <button className="hover:text-amber-700 transition-colors">
             <i className="far fa-heart text-xl"></i>
           </button>
-          <button className="hover:text-amber-700 transition-colors relative">
+          <Link href="/cart" id="navbar-cart-icon" className="hover:text-amber-700 transition-colors relative">
             <i className="fas fa-shopping-bag text-xl"></i>
-            <span className="absolute -top-1 -right-1 bg-black text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
-              1
-            </span>
-          </button>
+            {mounted && cartItems.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-black text-white text-[9px] w-4 h-4 flex items-center justify-center rounded-full">
+                {cartItems.reduce((total, item) => total + item.quantity, 0)}
+              </span>
+            )}
+          </Link>
           
           {/* User Profile Menu */}
           <div className="relative">
@@ -168,25 +189,49 @@ export default function Navbar() {
         >
           <i className="fas fa-times"></i>
         </button>
+        
+        {/* Mobile Search */}
+        <form 
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (searchQuery.trim()) {
+              toggleMobileMenu();
+              router.push(`/products?search=${encodeURIComponent(searchQuery.trim())}`);
+            }
+          }}
+          className="relative mb-8"
+        >
+          <input
+            type="text"
+            placeholder="Search fragrances..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-50 border border-transparent focus:border-gray-200 rounded-full py-3 px-5 pl-12 outline-none text-base font-light"
+          />
+          <button type="submit" className="absolute left-4 top-3.5">
+            <i className="fas fa-search text-gray-400 text-lg"></i>
+          </button>
+        </form>
+
         <div className="flex flex-col space-y-8 text-2xl font-display font-bold">
-          <Link href="#" className="flex justify-between items-center group">
-            New Arrivals{" "}
+          <Link href="/products" onClick={toggleMobileMenu} className="flex justify-between items-center group">
+            All Fragrances{" "}
             <i className="fas fa-arrow-right text-lg text-gray-300 group-hover:text-black transition-colors opacity-0 group-hover:opacity-100"></i>
           </Link>
-          <Link href="#" className="flex justify-between items-center group">
-            Women{" "}
+          <Link href="/products?category=floral" onClick={toggleMobileMenu} className="flex justify-between items-center group">
+            Floral{" "}
             <i className="fas fa-arrow-right text-lg text-gray-300 group-hover:text-black transition-colors opacity-0 group-hover:opacity-100"></i>
           </Link>
-          <Link href="#" className="flex justify-between items-center group">
-            Men{" "}
+          <Link href="/products?category=woody" onClick={toggleMobileMenu} className="flex justify-between items-center group">
+            Woody{" "}
             <i className="fas fa-arrow-right text-lg text-gray-300 group-hover:text-black transition-colors opacity-0 group-hover:opacity-100"></i>
           </Link>
-          <Link href="#" className="flex justify-between items-center group">
-            Home Scents{" "}
+          <Link href="/products?category=fresh" onClick={toggleMobileMenu} className="flex justify-between items-center group">
+            Fresh{" "}
             <i className="fas fa-arrow-right text-lg text-gray-300 group-hover:text-black transition-colors opacity-0 group-hover:opacity-100"></i>
           </Link>
-          <Link href="#" className="flex justify-between items-center text-amber-700">
-            Gifts
+          <Link href="/products?category=oriental" onClick={toggleMobileMenu} className="flex justify-between items-center text-amber-700">
+            Oriental
           </Link>
         </div>
       </div>

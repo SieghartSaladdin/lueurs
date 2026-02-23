@@ -46,28 +46,28 @@ export default function Footer() {
             </h4>
             <ul className="space-y-4 text-sm font-light text-gray-300">
               <li>
-                <Link href="#" className="hover:text-amber-500 transition-colors">
+                <Link href="/products" className="hover:text-amber-500 transition-colors">
                   All Fragrances
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-amber-500 transition-colors">
-                  Best Sellers
+                <Link href="/products?category=floral" className="hover:text-amber-500 transition-colors">
+                  Floral Collection
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-amber-500 transition-colors">
-                  Travel Sets
+                <Link href="/products?category=woody" className="hover:text-amber-500 transition-colors">
+                  Woody Collection
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-amber-500 transition-colors">
-                  Gift Cards
+                <Link href="/products?category=fresh" className="hover:text-amber-500 transition-colors">
+                  Fresh Collection
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-amber-500 transition-colors">
-                  Discovery Kit
+                <Link href="/products?category=oriental" className="hover:text-amber-500 transition-colors">
+                  Oriental Collection
                 </Link>
               </li>
             </ul>

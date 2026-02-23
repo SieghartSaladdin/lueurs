@@ -1,38 +1,40 @@
+import { formatCurrency } from "@/app/lib/utils";
+
 export default function RecentOrders() {
   const orders = [
     {
       id: "#ORD-001",
       customer: "Eleanor Vance",
       date: "Oct 24, 2023",
-      amount: "$320.00",
+      amount: formatCurrency(320.00),
       status: "Completed",
     },
     {
       id: "#ORD-002",
       customer: "Liam Gallagher",
       date: "Oct 23, 2023",
-      amount: "$185.00",
+      amount: formatCurrency(185.00),
       status: "Processing",
     },
     {
       id: "#ORD-003",
       customer: "Sophia Loren",
       date: "Oct 22, 2023",
-      amount: "$450.00",
+      amount: formatCurrency(450.00),
       status: "Shipped",
     },
     {
       id: "#ORD-004",
       customer: "James Dean",
       date: "Oct 21, 2023",
-      amount: "$120.00",
+      amount: formatCurrency(120.00),
       status: "Completed",
     },
     {
       id: "#ORD-005",
       customer: "Audrey Hepburn",
       date: "Oct 20, 2023",
-      amount: "$210.00",
+      amount: formatCurrency(210.00),
       status: "Pending",
     },
   ];

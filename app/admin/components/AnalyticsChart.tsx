@@ -1,3 +1,5 @@
+import { formatCurrency } from "@/app/lib/utils";
+
 export default function AnalyticsChart() {
   return (
     <div className="bg-white p-6 rounded-xl border border-gray-100 shadow-sm h-full flex flex-col">
@@ -28,7 +30,7 @@ export default function AnalyticsChart() {
                 style={{ height: `${height}%` }}
               >
                 <div className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-900 text-white text-xs py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                  ${height * 120}
+                  {formatCurrency(height * 120)}
                 </div>
               </div>
               <span className="text-xs text-gray-400 mt-2 font-medium">

@@ -108,7 +108,7 @@ Tujuan: Mengurangi *cart abandonment* dengan UI yang bersih dan transparan.
 *   **Checkout Page (One-Page atau Accordion):**
     *   *Step 1: Contact & Shipping.* Form alamat terintegrasi API RajaOngkir (Dropdown Provinsi -> Kota -> Kecamatan).
     *   *Step 2: Shipping Method.* Pilihan kurir (JNE, TIKI, dll) beserta harga real-time.
-    *   *Step 3: Payment.* Terintegrasi Midtrans (Virtual Account, GoPay, Credit Card). UI bersih tanpa redirect ke halaman luar jika memungkinkan (Snap Pop-up).
+    *   *Step 3: Payment.* Terintegrasi Xendit (Virtual Account, E-Wallet, Credit Card). Redirect ke halaman invoice Xendit.
 
 ---
 

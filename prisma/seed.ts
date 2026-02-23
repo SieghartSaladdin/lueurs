@@ -57,9 +57,9 @@ async function main() {
       categoryId: woody.id,
       variants: {
         create: [
-          { volume: 5, price: 25.00, stock: 100, weight: 50, sku: 'NI-EDP-05' },
-          { volume: 50, price: 185.00, stock: 50, weight: 250, sku: 'NI-EDP-50' },
-          { volume: 100, price: 280.00, stock: 30, weight: 400, sku: 'NI-EDP-100' },
+          { volume: 5, price: 375000, stock: 100, weight: 50, sku: 'NI-EDP-05' },
+          { volume: 50, price: 2775000, stock: 50, weight: 250, sku: 'NI-EDP-50' },
+          { volume: 100, price: 4200000, stock: 30, weight: 400, sku: 'NI-EDP-100' },
         ]
       }
     },
@@ -80,9 +80,9 @@ async function main() {
       categoryId: floral.id,
       variants: {
         create: [
-          { volume: 5, price: 20.00, stock: 150, weight: 50, sku: 'RP-EDT-05' },
-          { volume: 50, price: 145.00, stock: 80, weight: 250, sku: 'RP-EDT-50' },
-          { volume: 100, price: 220.00, stock: 40, weight: 400, sku: 'RP-EDT-100' },
+          { volume: 5, price: 300000, stock: 150, weight: 50, sku: 'RP-EDT-05' },
+          { volume: 50, price: 2175000, stock: 80, weight: 250, sku: 'RP-EDT-50' },
+          { volume: 100, price: 3300000, stock: 40, weight: 400, sku: 'RP-EDT-100' },
         ]
       }
     },
@@ -103,8 +103,8 @@ async function main() {
       categoryId: oriental.id,
       variants: {
         create: [
-          { volume: 5, price: 35.00, stock: 50, weight: 50, sku: 'OR-EXT-05' },
-          { volume: 50, price: 250.00, stock: 20, weight: 250, sku: 'OR-EXT-50' },
+          { volume: 5, price: 525000, stock: 50, weight: 50, sku: 'OR-EXT-05' },
+          { volume: 50, price: 3750000, stock: 20, weight: 250, sku: 'OR-EXT-50' },
         ]
       }
     },
@@ -125,8 +125,8 @@ async function main() {
       categoryId: fresh.id,
       variants: {
         create: [
-          { volume: 50, price: 120.00, stock: 100, weight: 250, sku: 'CV-COL-50' },
-          { volume: 100, price: 180.00, stock: 60, weight: 400, sku: 'CV-COL-100' },
+          { volume: 50, price: 1800000, stock: 100, weight: 250, sku: 'CV-COL-50' },
+          { volume: 100, price: 2700000, stock: 60, weight: 400, sku: 'CV-COL-100' },
         ]
       }
     },

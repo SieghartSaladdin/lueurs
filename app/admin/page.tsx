@@ -1,6 +1,7 @@
 import StatCard from "./components/StatCard";
 import RecentOrders from "./components/RecentOrders";
 import AnalyticsChart from "./components/AnalyticsChart";
+import { formatCurrency } from "@/app/lib/utils";
 
 export default function AdminPage() {
   return (
@@ -24,10 +25,10 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Revenue"
-          value="$45,231.89"
+          value={formatCurrency(45231.89)}
           trend="+20.1%"
           isPositive={true}
-          icon="fas fa-dollar-sign"
+          icon="fas fa-money-bill-wave"
         />
         <StatCard
           title="Total Orders"
@@ -63,10 +64,10 @@ export default function AdminPage() {
           </h3>
           <div className="space-y-6">
             {[
-              { name: "Noir Intense", sales: 124, price: "$185.00" },
-              { name: "Rose Poudrée", sales: 98, price: "$145.00" },
-              { name: "Oud Royal", sales: 76, price: "$250.00" },
-              { name: "Ambre Nuit", sales: 65, price: "$210.00" },
+              { name: "Noir Intense", sales: 124, price: formatCurrency(185.00) },
+              { name: "Rose Poudrée", sales: 98, price: formatCurrency(145.00) },
+              { name: "Oud Royal", sales: 76, price: formatCurrency(250.00) },
+              { name: "Ambre Nuit", sales: 65, price: formatCurrency(210.00) },
             ].map((product, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">

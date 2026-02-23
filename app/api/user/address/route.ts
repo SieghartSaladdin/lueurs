@@ -3,6 +3,26 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
 import { prisma } from "@/app/lib/prisma";
 
+export async function GET(request: Request) {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const addresses = await prisma.address.findMany({
+      where: { userId: session.user.id },
+      orderBy: { isDefault: 'desc' },
+    });
+
+    return NextResponse.json(addresses, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching addresses:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -34,8 +54,8 @@ export async function POST(request: Request) {
         provinceName,
         postalCode,
         isDefault,
-        cityId,
-        provinceId,
+        cityId: String(cityId),
+        provinceId: String(provinceId),
       },
     });
 
@@ -86,8 +106,8 @@ export async function PUT(request: Request) {
         provinceName,
         postalCode,
         isDefault,
-        cityId,
-        provinceId,
+        cityId: String(cityId),
+        provinceId: String(provinceId),
       },
     });
 

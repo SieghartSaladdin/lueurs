@@ -59,7 +59,7 @@ export default function ProcessSection() {
             </li>
           </ul>
           <Link
-            href="#"
+            href="/about"
             className="inline-block border-b border-black pb-1 uppercase tracking-widest text-xs font-bold hover:text-amber-700 hover:border-amber-700 transition-colors"
           >
             Read Our Story

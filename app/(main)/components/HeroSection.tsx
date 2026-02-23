@@ -28,16 +28,16 @@ export default function HeroSection() {
         </p>
         <div className="flex flex-col md:flex-row gap-4 justify-center">
           <Link
-            href="#"
+            href="/products"
             className="bg-white text-black px-10 py-3 rounded-none uppercase tracking-widest text-sm font-bold hover:bg-amber-50 transition-colors min-w-[200px]"
           >
-            Shop Women
+            Shop Collection
           </Link>
           <Link
-            href="#"
+            href="/products?category=floral"
             className="bg-transparent border border-white text-white px-10 py-3 rounded-none uppercase tracking-widest text-sm font-bold hover:bg-white hover:text-black transition-colors min-w-[200px]"
           >
-            Shop Men
+            Explore Floral
           </Link>
         </div>
       </div>

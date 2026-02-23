@@ -6,7 +6,7 @@
 - **UI Components:** PrimeReact (Tailwind CSS Unstyled Mode / Passthrough)
 - **Database ORM:** Prisma
 - **Database:** PostgreSQL / MySQL (via Prisma)
-- **Payment Gateway:** Midtrans
+- **Payment Gateway:** Xendit
 - **Shipping API:** RajaOngkir
 - **Authentication:** NextAuth.js (Auth.js)
 - **State Management:** Zustand / React Context (jika diperlukan)
@@ -31,18 +31,18 @@
 - [x] Halaman Profil User (Alamat, Riwayat Pesanan, Ulasan Saya)
 
 ### Phase 3: Core E-Commerce Features (Hari 3)
-- [ ] Menampilkan Daftar Parfum (Halaman Utama & Kategori Olfactory)
-- [ ] Halaman Detail Parfum (Menampilkan Piramida Aroma: Top, Heart, Base Notes)
-- [ ] Pemilihan Varian Ukuran Botol (Discovery Set 5ml, 50ml, 100ml)
-- [ ] Implementasi Shopping Cart berbasis Varian (State Management / Database)
-- [ ] Fitur Pencarian & Filter (Berdasarkan Notes, Kategori, Harga)
-- [ ] Sistem Ulasan & Rating (Longevity, Sillage, Overall)
+- [x] Menampilkan Daftar Parfum (Halaman Utama & Kategori Olfactory)
+- [x] Halaman Detail Parfum (Menampilkan Piramida Aroma: Top, Heart, Base Notes)
+- [x] Pemilihan Varian Ukuran Botol (Discovery Set 5ml, 50ml, 100ml)
+- [x] Implementasi Shopping Cart berbasis Varian (State Management / Database)
+- [x] Fitur Pencarian & Filter (Berdasarkan Notes, Kategori, Harga)
+- [x] Sistem Ulasan & Rating (Longevity, Sillage, Overall)
 
 ### Phase 4: Checkout & Integrasi API (Hari 4)
-- [ ] Halaman Checkout
-- [ ] Integrasi RajaOngkir (Hitung Ongkos Kirim berdasarkan berat Varian Botol)
-- [ ] Integrasi Midtrans (Snap API untuk Pembayaran)
-- [ ] Webhook Midtrans (Update status pesanan otomatis setelah dibayar)
+- [x] Halaman Checkout
+- [x] Integrasi RajaOngkir (Hitung Ongkos Kirim berdasarkan berat Varian Botol)
+- [x] Integrasi Xendit (Invoice API untuk Pembayaran)
+- [x] Webhook Xendit (Update status pesanan otomatis setelah dibayar)
 
 ### Phase 5: Admin Dashboard (Hari 5)
 - [ ] CRUD Produk Parfum & Varian Ukuran
@@ -202,7 +202,7 @@ model Order {
   totalAmount     Decimal     @db.Decimal(10, 2) // Subtotal + Ongkir
   paymentMethod   String?
   paymentStatus   PaymentStatus @default(UNPAID)
-  midtransOrderId String?     @unique // ID Order untuk Midtrans
+  xenditInvoiceId String?     @unique // ID Invoice untuk Xendit
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt

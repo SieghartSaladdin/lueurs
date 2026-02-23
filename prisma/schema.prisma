@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
 }
 
 datasource db {
@@ -174,7 +174,7 @@ model Order {
   totalAmount     Decimal     @db.Decimal(10, 2) // Subtotal + Ongkir
   paymentMethod   String?
   paymentStatus   PaymentStatus @default(UNPAID)
-  midtransOrderId String?     @unique // ID Order untuk Midtrans
+  xenditInvoiceId String?     @unique // ID Invoice untuk Xendit
   
   createdAt       DateTime    @default(now())
   updatedAt       DateTime    @updatedAt
