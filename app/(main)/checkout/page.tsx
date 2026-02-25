@@ -8,6 +8,13 @@ import { formatCurrency } from "@/app/lib/utils";
 import toast from "react-hot-toast";
 import Image from "next/image";
 
+const COURIER_OPTIONS = [
+  { code: 'jne', name: 'JNE', logo: 'https://biteship.com/static/images/couriers/jne.png' },
+  { code: 'sicepat', name: 'SiCepat', logo: 'https://biteship.com/static/images/couriers/sicepat.png' },
+  { code: 'jnt', name: 'J&T', logo: 'https://biteship.com/static/images/couriers/jnt.png' },
+  { code: 'anteraja', name: 'AnterAja', logo: 'https://biteship.com/static/images/couriers/anteraja.png' },
+];
+
 export default function CheckoutPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -21,6 +28,8 @@ export default function CheckoutPage() {
   const [shippingNote, setShippingNote] = useState<string>("Select address and courier to calculate shipping cost.");
   const [isLoading, setIsLoading] = useState(false);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [availableRates, setAvailableRates] = useState<any[]>([]);
+  const [selectedRateIndex, setSelectedRateIndex] = useState<number>(0);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -77,21 +86,34 @@ export default function CheckoutPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          destination: address.cityId,
+          // Gunakan biteshipId jika ada, atau fallback ke properties lain
+          destination: address.biteshipId || address.cityId || "",
           weight: totalWeight,
           courier,
+          items: items.map(item => ({
+            name: item.name,
+            description: `Volume: ${item.volume}ml`,
+            value: item.price,
+            length: 10,
+            width: 10,
+            height: 5,
+            weight: item.weight || 250,
+            quantity: item.quantity
+          }))
         }),
       });
 
       if (res.ok) {
         const data = await res.json();
         if (data.costs && data.costs.length > 0) {
-          // Get the first available service cost
+          setAvailableRates(data.costs);
+          setSelectedRateIndex(0);
           const firstCost = data.costs[0];
-          setShippingCost(firstCost.cost);
-          setShippingService(firstCost.service || "");
+          setShippingCost(firstCost.price);
+          setShippingService(firstCost.service_name || "");
           setShippingNote("Shipping cost is ready.");
         } else {
+          setAvailableRates([]);
           setShippingCost(0);
           setShippingService("");
           setShippingNote("Shipping cost is not available for this destination.");
@@ -136,14 +158,16 @@ export default function CheckoutPage() {
           items: items.map(item => ({ variantId: item.id, quantity: item.quantity })),
           shippingAddress: address,
           shippingCost,
-          courier,
+          courier: availableRates[selectedRateIndex]?.courier_code || courier,
+          shippingService: availableRates[selectedRateIndex]?.courier_service_code || availableRates[selectedRateIndex]?.service_name || "",
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Checkout failed");
+        console.error("Checkout Error Details:", data);
+        throw new Error(data.error ? `${data.message}: ${data.error}` : data.message || "Checkout failed");
       }
 
       if (data.invoiceUrl) {
@@ -221,21 +245,67 @@ export default function CheckoutPage() {
 
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
             <h2 className="text-2xl font-display mb-6">Shipping Method</h2>
-            <div className="grid grid-cols-3 gap-4">
-              {['jne', 'pos', 'tiki'].map((c) => (
-                <label key={c} className={`block p-4 border rounded-lg cursor-pointer text-center transition-colors ${courier === c ? 'border-amber-700 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              {COURIER_OPTIONS.map((c) => (
+                <label key={c.code} className={`p-4 border rounded-lg cursor-pointer text-center transition-colors flex flex-col items-center justify-center h-24 ${courier === c.code ? 'border-amber-700 bg-amber-50/30 ring-1 ring-amber-700' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'}`}>
                   <input
                     type="radio"
                     name="courier"
-                    value={c}
-                    checked={courier === c}
+                    value={c.code}
+                    checked={courier === c.code}
                     onChange={(e) => setCourier(e.target.value)}
                     className="sr-only"
                   />
-                  <span className="font-bold uppercase tracking-widest text-sm">{c}</span>
+                  {/* Gunakan class 'object-contain' agar gambar tidak melar & selalu pas di tengah */}
+                  <div className="relative w-16 h-8 mb-2">
+                    <img 
+                      src={c.logo} 
+                      alt={c.name} 
+                      className="object-contain w-full h-full"
+                      onError={(e) => {
+                        // Fallback jika gambar gagal load, tampilkan teks saja
+                        (e.target as HTMLImageElement).style.display = 'none';
+                        (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                      }}
+                    />
+                    <span className="hidden text-xs font-bold uppercase">{c.name}</span>
+                  </div>
+                  {/* <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">{c.name}</span> */}
                 </label>
               ))}
             </div>
+
+            {availableRates.length > 0 && (
+              <div className="space-y-3 mt-6 border-t pt-6">
+                <h3 className="text-lg font-medium mb-4">Select Service</h3>
+                {availableRates.map((rate, index) => (
+                  <label key={index} className={`block p-4 border rounded-lg cursor-pointer transition-colors ${selectedRateIndex === index ? 'border-amber-700 bg-amber-50/30' : 'border-gray-200 hover:border-gray-300'}`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <input
+                          type="radio"
+                          name="shippingRate"
+                          value={index}
+                          checked={selectedRateIndex === index}
+                          onChange={() => {
+                            setSelectedRateIndex(index);
+                            setShippingCost(rate.price);
+                          }}
+                          className="text-amber-700 focus:ring-amber-700"
+                        />
+                        <div className="ml-3">
+                          <p className="font-medium text-gray-900">{rate.service_name}</p>
+                          <p className="text-sm text-gray-500">{rate.description}</p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-gray-900">Rp {rate.price.toLocaleString('id-ID')}</p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

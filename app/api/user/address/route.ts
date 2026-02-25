@@ -23,22 +23,38 @@ export async function GET(request: Request) {
   }
 }
 
+
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { street, cityName, provinceName, postalCode, isDefault, cityId, provinceId } = body;
+    const { 
+      street, 
+      addressId,
+      addressName,
+      countryName,
+      countryCode,
+      provinceName,
+      provinceType,
+      cityName,
+      cityType,
+      districtName,
+      districtType,
+      postalCode,
+      latitude,
+      longitude,
+      isDefault 
+    } = body;
 
-    if (!street || !cityName || !provinceName || !postalCode) {
+    if (!street || !addressId || !postalCode) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
-    // If this is set as default, unset other default addresses for this user
+    // Jika alamat ini dijadikan default, reset alamat default lainnya
     if (isDefault) {
       await prisma.address.updateMany({
         where: { userId: session.user.id, isDefault: true },
@@ -46,20 +62,28 @@ export async function POST(request: Request) {
       });
     }
 
-    const address = await prisma.address.create({
+    const newAddress = await prisma.address.create({
       data: {
         userId: session.user.id,
         street,
-        cityName,
+        biteshipId: addressId,
+        addressName,
+        countryName,
+        countryCode,
         provinceName,
+        provinceType,
+        cityName,
+        cityType,
+        districtName,
+        districtType,
         postalCode,
-        isDefault,
-        cityId: String(cityId),
-        provinceId: String(provinceId),
+        latitude: latitude !== undefined && latitude !== null ? Number(latitude) : null,
+        longitude: longitude !== undefined && longitude !== null ? Number(longitude) : null,
+        isDefault: isDefault || false,
       },
     });
 
-    return NextResponse.json(address, { status: 201 });
+    return NextResponse.json(newAddress, { status: 201 });
   } catch (error) {
     console.error("Error creating address:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
@@ -69,16 +93,32 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const session = await getServerSession(authOptions);
-
-    if (!session) {
+    if (!session?.user?.id) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    const { id, street, cityName, provinceName, postalCode, isDefault, cityId, provinceId } = body;
+    const { 
+      id,
+      street, 
+      addressId,
+      addressName,
+      countryName,
+      countryCode,
+      provinceName,
+      provinceType,
+      cityName,
+      cityType,
+      districtName,
+      districtType,
+      postalCode,
+      latitude,
+      longitude,
+      isDefault 
+    } = body;
 
-    if (!id || !street || !cityName || !provinceName || !postalCode) {
-      return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
+    if (!id) {
+      return NextResponse.json({ message: "Missing address ID" }, { status: 400 });
     }
 
     // Verify ownership
@@ -90,28 +130,36 @@ export async function PUT(request: Request) {
       return NextResponse.json({ message: "Address not found or unauthorized" }, { status: 404 });
     }
 
-    // If this is set as default, unset other default addresses for this user
+    // Jika alamat ini dijadikan default, reset alamat default lainnya
     if (isDefault) {
       await prisma.address.updateMany({
-        where: { userId: session.user.id, isDefault: true, id: { not: id } },
+        where: { userId: session.user.id, id: { not: id }, isDefault: true },
         data: { isDefault: false },
       });
     }
 
-    const address = await prisma.address.update({
+    const updatedAddress = await prisma.address.update({
       where: { id },
       data: {
         street,
-        cityName,
+        biteshipId: addressId,
+        addressName,
+        countryName,
+        countryCode,
         provinceName,
+        provinceType,
+        cityName,
+        cityType,
+        districtName,
+        districtType,
         postalCode,
-        isDefault,
-        cityId: String(cityId),
-        provinceId: String(provinceId),
+        latitude: latitude !== undefined && latitude !== null ? Number(latitude) : null,
+        longitude: longitude !== undefined && longitude !== null ? Number(longitude) : null,
+        isDefault: isDefault || false,
       },
     });
 
-    return NextResponse.json(address, { status: 200 });
+    return NextResponse.json(updatedAddress, { status: 200 });
   } catch (error) {
     console.error("Error updating address:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

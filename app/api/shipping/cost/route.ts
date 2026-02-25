@@ -3,74 +3,82 @@ import { NextResponse } from "next/server";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { destination, weight, courier } = body;
+    // Pastikan payload dari frontend mengirim 'destination' berupa area_id dari Biteship
+    const { destination, weight, courier, items } = body;
 
-    if (!destination || !weight || !courier) {
+    // Validasi dasar
+    if (!destination || !weight) {
       return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
     }
 
-    // Origin fallback can be overridden via env STORE_CITY_ID
-    const origin = process.env.STORE_CITY_ID || "153";
-    const apiKey = process.env.RAJAONGKIR_API_KEY_SHIPPING_COST;
+    const apiKey = process.env.BITESHIP_API_KEY;
+    // Gunakan Area ID Toko Anda (Bukan ID Kota RajaOngkir!)
+    const origin = process.env.STORE_AREA_ID || "IDNP11IDNC167"; 
 
     if (!apiKey) {
-      return NextResponse.json({ message: "Shipping API key is not configured" }, { status: 500 });
+      return NextResponse.json({ message: "API Key Error" }, { status: 500 });
     }
 
-    const response = await fetch("https://rajaongkir.komerce.id/api/v1/calculate/domestic-cost", {
+    // Format kurir: "jne,sicepat,jnt,anteraja" (tanpa spasi setelah koma)
+    // Jika user pilih 'all', kita tembak kurir populer saja
+    const selectedCouriers = (!courier || courier === 'all') 
+      ? "jne,sicepat,jnt,anteraja" 
+      : courier.toLowerCase();
+
+    // -- REQUEST KE BITESHIP --
+    const response = await fetch("https://api.biteship.com/v1/rates/couriers", { // <--- Endpoint yang Benar
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        key: apiKey,
+        "Content-Type": "application/json",
+        "Authorization": apiKey, // Coba langsung key dulu, atau pakai `Bearer ${apiKey}`
       },
-      body: new URLSearchParams({
-        origin,
-        destination: destination.toString(),
-        weight: weight.toString(),
-        courier: courier.toLowerCase(),
+      body: JSON.stringify({
+        origin_area_id: origin,
+        destination_area_id: destination,
+        couriers: selectedCouriers,
+        items: items && items.length > 0 ? items : [
+          {
+            name: "Produk Toko",
+            description: "Aksesoris",
+            value: 150000, // Harga barang (Wajib estimasi agar asuransi hitung)
+            length: 10,
+            width: 10,
+            height: 5,
+            weight: parseInt(weight), // Pastikan Integer (Gram)
+            quantity: 1
+          }
+        ]
       }),
     });
 
     const data = await response.json();
 
-    if (data.meta?.code !== 200) {
+    // Cek jika Biteship error (misal area_id tidak ditemukan)
+    if (!data.success) {
       return NextResponse.json(
-        { message: data.meta?.message || "Failed to calculate shipping cost" },
-        { status: data.meta?.code || 500 }
+        { message: data.error || "Gagal cek ongkir dari Biteship" },
+        { status: 400 }
       );
     }
 
-    const rawData = Array.isArray(data.data) ? data.data : [];
-    let costs: Array<{ service: string; description: string; cost: number }> = [];
-
-    if (rawData.length > 0 && Array.isArray(rawData[0]?.costs)) {
-      costs = rawData[0].costs
-        .map((item: any) => ({
-          service: item?.service || "",
-          description: item?.description || "",
-          cost: Number(item?.cost ?? 0),
-        }))
-        .filter((item: { service: string; description: string; cost: number }) => item.cost > 0);
-    } else if (rawData.length > 0 && rawData[0]?.cost !== undefined) {
-      costs = rawData
-        .map((item: any) => ({
-          service: item?.service || item?.code || courier.toUpperCase(),
-          description: item?.description || "",
-          cost: Number(item?.cost ?? 0),
-        }))
-        .filter((item: { service: string; description: string; cost: number }) => item.cost > 0);
-    }
-
-    if (costs.length === 0) {
-      return NextResponse.json(
-        { message: "Shipping cost not available for this destination" },
-        { status: 404 }
-      );
-    }
+    // -- MAPPING DATA UNTUK FRONTEND --
+    // Biteship mengembalikan array di 'pricing'
+    const costs = data.pricing.map((rate: any) => ({
+      // Nama Kurir (JNE) + Layanan (REG)
+      service: `${rate.courier_name} ${rate.service_type}`, 
+      service_name: `${rate.courier_name} ${rate.service_type}`, // Tambahan field ini untuk frontend
+      description: `Estimasi ${rate.duration}`, // Estimasi hari
+      cost: rate.price, // Harga Ongkir
+      price: rate.price, // Tambahan field ini untuk frontend
+      etd: rate.duration, // Opsional: data tambahan
+      courier_code: rate.courier_code, // Opsional: jne/sicepat
+      courier_service_code: rate.courier_service_code // Tambahan untuk webhook xendit
+    }));
 
     return NextResponse.json({ costs });
+
   } catch (error) {
-    console.error("Error calculating shipping cost:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    console.error("Server Error:", error);
+    return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
   }
 }

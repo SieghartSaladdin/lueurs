@@ -2,8 +2,56 @@ import StatCard from "./components/StatCard";
 import RecentOrders from "./components/RecentOrders";
 import AnalyticsChart from "./components/AnalyticsChart";
 import { formatCurrency } from "@/app/lib/utils";
+import { prisma } from "@/app/lib/prisma";
 
-export default function AdminPage() {
+export default async function AdminPage() {
+  // Fetch real data
+  const [totalOrders, totalRevenueResult, activeCustomers, topProducts] = await Promise.all([
+    prisma.order.count(),
+    prisma.order.aggregate({
+      _sum: {
+        totalAmount: true,
+      },
+      where: {
+        paymentStatus: "PAID",
+      },
+    }),
+    prisma.user.count({
+      where: {
+        role: "CUSTOMER",
+      },
+    }),
+    prisma.orderItem.groupBy({
+      by: ['variantId'],
+      _sum: {
+        quantity: true,
+      },
+      orderBy: {
+        _sum: {
+          quantity: 'desc',
+        },
+      },
+      take: 4,
+    }),
+  ]);
+
+  const totalRevenue = Number(totalRevenueResult._sum.totalAmount || 0);
+
+  // Fetch product details for top products
+  const topProductsDetails = await Promise.all(
+    topProducts.map(async (tp) => {
+      const variant = await prisma.productVariant.findUnique({
+        where: { id: tp.variantId },
+        include: { product: true },
+      });
+      return {
+        name: `${variant?.product.name} (${variant?.volume}ml)`,
+        sales: tp._sum.quantity || 0,
+        price: formatCurrency(Number(variant?.price || 0)),
+      };
+    })
+  );
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-end">
@@ -25,21 +73,21 @@ export default function AdminPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
           title="Total Revenue"
-          value={formatCurrency(45231.89)}
+          value={formatCurrency(totalRevenue)}
           trend="+20.1%"
           isPositive={true}
           icon="fas fa-money-bill-wave"
         />
         <StatCard
           title="Total Orders"
-          value="356"
+          value={totalOrders.toString()}
           trend="+12.5%"
           isPositive={true}
           icon="fas fa-shopping-bag"
         />
         <StatCard
           title="Active Customers"
-          value="2,420"
+          value={activeCustomers.toString()}
           trend="+5.2%"
           isPositive={true}
           icon="fas fa-users"
@@ -63,12 +111,7 @@ export default function AdminPage() {
             Top Selling Products
           </h3>
           <div className="space-y-6">
-            {[
-              { name: "Noir Intense", sales: 124, price: formatCurrency(185.00) },
-              { name: "Rose Poudrée", sales: 98, price: formatCurrency(145.00) },
-              { name: "Oud Royal", sales: 76, price: formatCurrency(250.00) },
-              { name: "Ambre Nuit", sales: 65, price: formatCurrency(210.00) },
-            ].map((product, i) => (
+            {topProductsDetails.map((product, i) => (
               <div key={i} className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
                   <div className="w-12 h-12 bg-stone-100 rounded-lg flex items-center justify-center text-amber-700 font-bold">
@@ -84,6 +127,9 @@ export default function AdminPage() {
                 <span className="font-medium text-gray-900">{product.price}</span>
               </div>
             ))}
+            {topProductsDetails.length === 0 && (
+              <p className="text-gray-500 text-sm">No sales data available yet.</p>
+            )}
           </div>
         </div>
       </div>

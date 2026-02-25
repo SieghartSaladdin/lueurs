@@ -81,6 +81,11 @@ export default function AddressSection({ addresses }: { addresses: any[] }) {
               <p className="font-medium mb-1">{address.street}</p>
               <p className="text-sm text-gray-600">{address.cityName}, {address.provinceName}</p>
               <p className="text-sm text-gray-600">{address.postalCode}</p>
+              {address.latitude && address.longitude && (
+                <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                  <i className="pi pi-map-marker text-[10px]"></i> Location Pinned
+                </p>
+              )}
               <div className="mt-4 flex space-x-3">
                 <button 
                   onClick={() => handleEdit(address)}

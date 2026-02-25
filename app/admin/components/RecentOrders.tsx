@@ -1,54 +1,32 @@
 import { formatCurrency } from "@/app/lib/utils";
+import { prisma } from "@/app/lib/prisma";
+import Link from "next/link";
 
-export default function RecentOrders() {
-  const orders = [
-    {
-      id: "#ORD-001",
-      customer: "Eleanor Vance",
-      date: "Oct 24, 2023",
-      amount: formatCurrency(320.00),
-      status: "Completed",
+export default async function RecentOrders() {
+  const orders = await prisma.order.findMany({
+    take: 5,
+    orderBy: {
+      createdAt: "desc",
     },
-    {
-      id: "#ORD-002",
-      customer: "Liam Gallagher",
-      date: "Oct 23, 2023",
-      amount: formatCurrency(185.00),
-      status: "Processing",
+    include: {
+      user: {
+        select: { name: true },
+      },
     },
-    {
-      id: "#ORD-003",
-      customer: "Sophia Loren",
-      date: "Oct 22, 2023",
-      amount: formatCurrency(450.00),
-      status: "Shipped",
-    },
-    {
-      id: "#ORD-004",
-      customer: "James Dean",
-      date: "Oct 21, 2023",
-      amount: formatCurrency(120.00),
-      status: "Completed",
-    },
-    {
-      id: "#ORD-005",
-      customer: "Audrey Hepburn",
-      date: "Oct 20, 2023",
-      amount: formatCurrency(210.00),
-      status: "Pending",
-    },
-  ];
+  });
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case "Completed":
+      case "DELIVERED":
         return "bg-green-100 text-green-800";
-      case "Processing":
+      case "PROCESSING":
         return "bg-blue-100 text-blue-800";
-      case "Shipped":
+      case "SHIPPED":
         return "bg-purple-100 text-purple-800";
-      case "Pending":
+      case "PENDING":
         return "bg-yellow-100 text-yellow-800";
+      case "CANCELLED":
+        return "bg-red-100 text-red-800";
       default:
         return "bg-gray-100 text-gray-800";
     }
@@ -60,9 +38,9 @@ export default function RecentOrders() {
         <h3 className="text-lg font-display font-medium text-gray-900">
           Recent Orders
         </h3>
-        <button className="text-sm font-medium text-amber-700 hover:text-amber-900 transition-colors">
+        <Link href="/admin/orders" className="text-sm font-medium text-amber-700 hover:text-amber-900 transition-colors">
           View All
-        </button>
+        </Link>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -82,12 +60,12 @@ export default function RecentOrders() {
                 className="hover:bg-gray-50 transition-colors border-b border-gray-50 last:border-0"
               >
                 <td className="px-6 py-4 font-medium text-gray-900">
-                  {order.id}
+                  #{order.id.slice(-6).toUpperCase()}
                 </td>
-                <td className="px-6 py-4">{order.customer}</td>
-                <td className="px-6 py-4">{order.date}</td>
+                <td className="px-6 py-4">{order.user.name || "Guest"}</td>
+                <td className="px-6 py-4">{new Date(order.createdAt).toLocaleDateString()}</td>
                 <td className="px-6 py-4 font-medium text-gray-900">
-                  {order.amount}
+                  {formatCurrency(Number(order.totalAmount))}
                 </td>
                 <td className="px-6 py-4">
                   <span
@@ -100,6 +78,13 @@ export default function RecentOrders() {
                 </td>
               </tr>
             ))}
+            {orders.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
+                  No recent orders found.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

@@ -11,8 +11,10 @@ export default function AdminSidebar() {
   const menuItems = [
     { name: "Dashboard", href: "/admin", icon: "fas fa-chart-line" },
     { name: "Products", href: "/admin/products", icon: "fas fa-box-open" },
+    { name: "Categories", href: "/admin/categories", icon: "fas fa-tags" },
     { name: "Orders", href: "/admin/orders", icon: "fas fa-shopping-cart" },
     { name: "Customers", href: "/admin/customers", icon: "fas fa-users" },
+    { name: "Reviews", href: "/admin/reviews", icon: "fas fa-star" },
     { name: "Analytics", href: "/admin/analytics", icon: "fas fa-chart-pie" },
     { name: "Settings", href: "/admin/settings", icon: "fas fa-cog" },
   ];

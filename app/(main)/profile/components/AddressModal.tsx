@@ -8,7 +8,19 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { InputTextarea } from "primereact/inputtextarea";
 import { Checkbox } from "primereact/checkbox";
-import { Dropdown } from "primereact/dropdown";
+import { AutoComplete } from "primereact/autocomplete";
+import { GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
+
+const mapContainerStyle = {
+  width: '100%',
+  height: '300px',
+  borderRadius: '0.375rem'
+};
+
+const defaultCenter = {
+  lat: -6.200000, // Default Jakarta
+  lng: 106.816666
+};
 
 interface AddressModalProps {
   isOpen: boolean;
@@ -19,107 +31,170 @@ interface AddressModalProps {
 export default function AddressModal({ isOpen, onClose, addressToEdit }: AddressModalProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [provinces, setProvinces] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
+  const [addresses, setAddresses] = useState<any[]>([]);
   
   const [formData, setFormData] = useState({
     street: "",
-    provinceId: "",
+    addressId: "",
+    addressName: "",
+    countryName: "",
+    countryCode: "",
     provinceName: "",
-    cityId: "",
+    provinceType: "",
     cityName: "",
+    cityType: "",
+    districtName: "",
+    districtType: "",
     postalCode: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
     isDefault: false,
   });
 
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: "AIzaSyDckv5CWgT0ni00bpPOjybLzIoSE2PynPw"
+  });
+
+  const [mapCenter, setMapCenter] = useState(defaultCenter);
+
   useEffect(() => {
     if (isOpen) {
-      fetchProvinces();
+      // search will be performed on demand by AutoComplete
     }
   }, [isOpen]);
-
-  const fetchProvinces = async () => {
-    try {
-      const res = await fetch("/api/shipping/provinces");
-      if (res.ok) {
-        const data = await res.json();
-        setProvinces(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch provinces", error);
-    }
-  };
-
-  const fetchCities = async (provinceId: string) => {
-    try {
-      const res = await fetch(`/api/shipping/cities?province=${provinceId}`);
-      if (res.ok) {
-        const data = await res.json();
-        setCities(data);
-      }
-    } catch (error) {
-      console.error("Failed to fetch cities", error);
-    }
-  };
-
-  useEffect(() => {
-    if (formData.provinceId) {
-      fetchCities(formData.provinceId);
-    } else {
-      setCities([]);
-    }
-  }, [formData.provinceId]);
 
   useEffect(() => {
     if (addressToEdit) {
       setFormData({
         street: addressToEdit.street || "",
-        provinceId: String(addressToEdit.provinceId) || "",
-        provinceName: addressToEdit.provinceName || "",
-        cityId: String(addressToEdit.cityId) || "",
-        cityName: addressToEdit.cityName || "",
-        postalCode: addressToEdit.postalCode || "",
+        addressId: addressToEdit.biteshipId || addressToEdit.addressId || "",
+        addressName: addressToEdit.addressName || addressToEdit.name || "",
+        countryName: addressToEdit.countryName || "",
+        countryCode: addressToEdit.countryCode || "",
+        provinceName: addressToEdit.provinceName || addressToEdit.administrative_division_level_1_name || "",
+        provinceType: addressToEdit.provinceType || addressToEdit.administrative_division_level_1_type || "",
+        cityName: addressToEdit.cityName || addressToEdit.administrative_division_level_2_name || "",
+        cityType: addressToEdit.cityType || addressToEdit.administrative_division_level_2_type || "",
+        districtName: addressToEdit.districtName || addressToEdit.administrative_division_level_3_name || "",
+        districtType: addressToEdit.districtType || addressToEdit.administrative_division_level_3_type || "",
+        postalCode: addressToEdit.postalCode || addressToEdit.postal_code || "",
+        latitude: addressToEdit.latitude || null,
+        longitude: addressToEdit.longitude || null,
         isDefault: addressToEdit.isDefault || false,
       });
+      
+      if (addressToEdit.latitude && addressToEdit.longitude) {
+        setMapCenter({ lat: addressToEdit.latitude, lng: addressToEdit.longitude });
+      }
+
+      // preload single selected address into suggestions so autocomplete shows value
+      if (addressToEdit.addressId || addressToEdit.biteshipId) {
+        setAddresses([{ 
+          id: addressToEdit.addressId || addressToEdit.biteshipId, 
+          name: addressToEdit.addressName || addressToEdit.name || '', 
+          postal_code: addressToEdit.postal_code || addressToEdit.postalCode,
+          latitude: addressToEdit.latitude,
+          longitude: addressToEdit.longitude
+        }]);
+      }
     } else {
       setFormData({
         street: "",
-        provinceId: "",
+        addressId: "",
+        addressName: "",
+        countryName: "",
+        countryCode: "",
         provinceName: "",
-        cityId: "",
+        provinceType: "",
         cityName: "",
+        cityType: "",
+        districtName: "",
+        districtType: "",
         postalCode: "",
+        latitude: null,
+        longitude: null,
         isDefault: false,
       });
+      setAddresses([]);
+      setMapCenter(defaultCenter);
     }
   }, [addressToEdit, isOpen]);
 
-  const handleProvinceChange = (e: any) => {
-    const selectedProvince = provinces.find(p => String(p.id) === String(e.value));
-    setFormData({
-      ...formData,
-      provinceId: String(e.value),
-      provinceName: selectedProvince ? selectedProvince.name : "",
-      cityId: "",
-      cityName: "",
-    });
+  const handleAddressChange = async (e: any) => {
+    const selected = addresses.find((a) => String(a.id) === String(e.value?.id || e.value));
+    if (selected) {
+      const addressName = selected.name || selected.address_name || "";
+      
+      setFormData({
+        ...formData,
+        addressId: String(selected.id),
+        addressName: addressName,
+        countryName: selected.country_name || "",
+        countryCode: selected.country_code || "",
+        provinceName: selected.administrative_division_level_1_name || "",
+        provinceType: selected.administrative_division_level_1_type || "",
+        cityName: selected.administrative_division_level_2_name || "",
+        cityType: selected.administrative_division_level_2_type || "",
+        districtName: selected.administrative_division_level_3_name || "",
+        districtType: selected.administrative_division_level_3_type || "",
+        postalCode: String(selected.postal_code || formData.postalCode || ""),
+        latitude: selected.latitude || null,
+        longitude: selected.longitude || null,
+      });
+      
+      if (selected.latitude && selected.longitude) {
+        setMapCenter({ lat: selected.latitude, lng: selected.longitude });
+      } else if (addressName) {
+        // Geocode the selected area to center the map
+        try {
+          const geocoder = new google.maps.Geocoder();
+          geocoder.geocode({ address: addressName }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              const location = results[0].geometry.location;
+              setMapCenter({ lat: location.lat(), lng: location.lng() });
+              // Optionally set the marker to the center of the area
+              // setFormData(prev => ({ ...prev, latitude: location.lat(), longitude: location.lng() }));
+            }
+          });
+        } catch (err) {
+          console.error("Geocoding error:", err);
+        }
+      }
+    } else {
+      setFormData({ ...formData, addressId: "", addressName: e.value || "", latitude: null, longitude: null });
+    }
   };
 
-  const handleCityChange = (e: any) => {
-    const selectedCity = cities.find(c => String(c.id) === String(e.value));
-    setFormData({
-      ...formData,
-      cityId: String(e.value),
-      cityName: selectedCity ? selectedCity.name : "",
-      // If postal code is not provided by the API, keep the existing one
-      postalCode: selectedCity?.postal_code || formData.postalCode,
-    });
+  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+    if (e.latLng) {
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      setFormData({ ...formData, latitude: lat, longitude: lng });
+    }
+  };
+
+  const searchAddresses = async (event: any) => {
+    const q = event.query || "";
+    if (!q) {
+      setAddresses([]);
+      return;
+    }
+    try {
+      const res = await fetch(`/api/shipping/address?search=${encodeURIComponent(q)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setAddresses(data || []);
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.street || !formData.provinceId || !formData.cityId || !formData.postalCode) {
+
+    if (!formData.street || !formData.addressId || !formData.postalCode) {
       toast.error("Please fill all required fields");
       return;
     }
@@ -172,7 +247,51 @@ export default function AddressModal({ isOpen, onClose, addressToEdit }: Address
     >
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex flex-col gap-2">
-          <label htmlFor="street" className="text-sm font-medium text-gray-700">Street Address</label>
+          <label htmlFor="addressName" className="text-sm font-medium text-gray-700">Address</label>
+          <AutoComplete
+            id="addressName"
+            value={formData.addressName}
+            suggestions={addresses}
+            completeMethod={searchAddresses}
+            field="name"
+            onChange={(e) => handleAddressChange(e)}
+            placeholder="Search an address (e.g. Kiaracondong, Bandung, Jawa Barat. 40281)"
+            dropdown={true}
+            aria-label="address"
+            className="w-full border border-gray-300 rounded-md"
+          />
+        </div>
+
+        {isLoaded && (
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-gray-700">Pinpoint Location</label>
+            <p className="text-xs text-gray-500">Click on the map to set your exact location.</p>
+            <div className="border border-gray-300 rounded-md overflow-hidden">
+              <GoogleMap
+                mapContainerStyle={mapContainerStyle}
+                center={mapCenter}
+                zoom={15}
+                onClick={handleMapClick}
+                options={{
+                  streetViewControl: false,
+                  mapTypeControl: false,
+                }}
+              >
+                {formData.latitude && formData.longitude && (
+                  <Marker position={{ lat: formData.latitude, lng: formData.longitude }} />
+                )}
+              </GoogleMap>
+            </div>
+            {formData.latitude && formData.longitude && (
+              <small className="text-green-600">
+                ✓ Location selected: {formData.latitude.toFixed(6)}, {formData.longitude.toFixed(6)}
+              </small>
+            )}
+          </div>
+        )}
+
+        <div className="flex flex-col gap-2">
+          <label htmlFor="street" className="text-sm font-medium text-gray-700">Street Address (detail)</label>
           <InputTextarea
             id="street"
             required
@@ -183,58 +302,29 @@ export default function AddressModal({ isOpen, onClose, addressToEdit }: Address
             onChange={(e) => setFormData({ ...formData, street: e.target.value })}
           />
         </div>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div className="flex flex-col gap-2">
-            <label htmlFor="provinceId" className="text-sm font-medium text-gray-700">Province</label>
-            <Dropdown
-              id="provinceId"
-              value={formData.provinceId ? Number(formData.provinceId) : null}
-              onChange={handleProvinceChange}
-              options={provinces}
-              optionLabel="name"
-              optionValue="id"
-              placeholder="Select a Province"
-              filter
-              className="w-full border border-gray-300 rounded-md"
-              pt={{
-                input: { className: 'px-3 py-2' },
-                trigger: { className: 'px-3' }
-              }}
+            <label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</label>
+            <InputText
+              id="postalCode"
+              type="text"
+              required
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              placeholder="12345"
+              value={formData.postalCode}
+              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-2">
-            <label htmlFor="cityId" className="text-sm font-medium text-gray-700">City</label>
-            <Dropdown
-              id="cityId"
-              value={formData.cityId ? Number(formData.cityId) : null}
-              onChange={handleCityChange}
-              options={cities}
-              optionLabel="name"
-              optionValue="id"
-              placeholder="Select a City"
-              filter
-              disabled={!formData.provinceId}
-              className="w-full border border-gray-300 rounded-md"
-              pt={{
-                input: { className: 'px-3 py-2' },
-                trigger: { className: 'px-3' }
-              }}
+            <label htmlFor="provinceName" className="text-sm font-medium text-gray-700">Province / City</label>
+            <InputText
+              id="provinceName"
+              readOnly
+              className="w-full px-3 py-2 border border-gray-300 rounded-md bg-gray-50"
+              value={`${formData.provinceName}${formData.cityName ? ` / ${formData.cityName}` : ''}`}
             />
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label htmlFor="postalCode" className="text-sm font-medium text-gray-700">Postal Code</label>
-          <InputText
-            id="postalCode"
-            type="text"
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
-            placeholder="12345"
-            value={formData.postalCode}
-            onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
-          />
         </div>
 
         <div className="flex items-center gap-2 mt-4">

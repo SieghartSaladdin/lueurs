@@ -45,14 +45,14 @@
 - [x] Webhook Xendit (Update status pesanan otomatis setelah dibayar)
 
 ### Phase 5: Admin Dashboard (Hari 5)
-- [ ] CRUD Produk Parfum & Varian Ukuran
-- [ ] Manajemen Kategori (Olfactory Families) & Notes
-- [ ] Manajemen Pesanan (Update status pengiriman, input resi)
-- [ ] Moderasi Ulasan Pelanggan
-- [ ] Dashboard Analytics (Penjualan per Varian/Ukuran)
+- [x] CRUD Produk Parfum & Varian Ukuran
+- [x] Manajemen Kategori (Olfactory Families) & Notes
+- [x] Manajemen Pesanan (Update status pengiriman, input resi)
+- [x] Moderasi Ulasan Pelanggan
+- [x] Dashboard Analytics (Penjualan per Varian/Ukuran)
 
 ### Phase 6: Testing & Deployment (Hari 6)
-- [ ] Testing alur checkout dari awal sampai akhir
+- [-] Testing alur checkout dari awal sampai akhir (Dalam Proses)
 - [ ] Optimasi SEO & Performa (Image optimization, Meta tags)
 - [ ] Deployment ke Vercel / VPS
 

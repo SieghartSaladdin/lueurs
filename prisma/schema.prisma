@@ -71,11 +71,19 @@ model Address {
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   street      String
-  cityId      String   // ID Kota dari RajaOngkir
-  cityName    String
-  provinceId  String   // ID Provinsi dari RajaOngkir
-  provinceName String
-  postalCode  String
+  biteshipId  String?  // External ID from Biteship
+  addressName String?  // Full address string from Biteship (e.g. "Kiaracondong, Bandung, Jawa Barat. 40281")
+  countryName String?
+  countryCode String?
+  provinceName String?
+  provinceType String?
+  cityName    String?
+  cityType    String?
+  districtName String?
+  districtType String?
+  postalCode  String?
+  latitude    Float?
+  longitude   Float?
   isDefault   Boolean  @default(false)
 }
 
@@ -167,6 +175,7 @@ model Order {
   // Pengiriman
   shippingCost    Decimal     @db.Decimal(10, 2)
   courier         String      // JNE, POS, TIKI
+  shippingService String?     // REG, YES, OKE
   trackingNumber  String?
   shippingAddress Json        // Simpan snapshot alamat saat checkout
 

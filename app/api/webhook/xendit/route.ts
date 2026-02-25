@@ -5,56 +5,57 @@ export async function POST(request: Request) {
   try {
     console.log("=== XENDIT WEBHOOK RECEIVED ===");
     
-    // Verifikasi Token Xendit
+    // ----------------------------------------------------------------
+    // 1. VERIFIKASI KEAMANAN (TOKEN)
+    // ----------------------------------------------------------------
     const xenditToken = request.headers.get("x-callback-token");
-    console.log("Received Token:", xenditToken);
     const expectedToken = process.env.XENDIT_WEBHOOK_TOKEN;
 
     if (!expectedToken) {
-      return NextResponse.json({ message: "Webhook token is not configured" }, { status: 500 });
+      console.error("Missing XENDIT_WEBHOOK_TOKEN in .env");
+      return NextResponse.json({ message: "Server misconfiguration" }, { status: 500 });
     }
 
     if (xenditToken !== expectedToken) {
+      console.warn("Unauthorized webhook attempt");
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    // ----------------------------------------------------------------
+    // 2. PARSE DATA DARI XENDIT
+    // ----------------------------------------------------------------
     const body = await request.json();
-    console.log("Webhook Payload:", JSON.stringify(body, null, 2));
-    
+    // console.log("Raw Webhook Body:", JSON.stringify(body).substring(0, 200) + "..."); 
+
     const event = String(body?.event || "").toLowerCase();
     const payload = body?.data ?? body;
 
+    // Identifikasi ID Order
     const invoiceId = payload?.id || body?.id;
     const externalId =
       payload?.external_id ||
       payload?.externalId ||
       payload?.reference_id ||
-      payload?.referenceId ||
       payload?.metadata?.orderId ||
-      body?.external_id ||
-      body?.externalId;
+      body?.external_id;
       
     const status = String(payload?.status || body?.status || "").toUpperCase();
 
-    // 1. PERBAIKAN: Ekstrak Payment Method dengan aman (mendukung String maupun Object)
+    // Identifikasi Payment Method (Support String & Object)
     let rawPaymentMethod = "XENDIT_INVOICE";
-    
     if (typeof payload?.payment_method === "string") {
         rawPaymentMethod = payload.payment_method;
-    } else if (typeof payload?.payment_method === "object" && payload?.payment_method !== null) {
-        // Ekstrak dari Object API v2 Xendit
-        rawPaymentMethod = payload.payment_method.qr_code?.channel_code || payload.payment_method.type || "QRIS";
+    } else if (payload?.payment_method?.type) {
+        rawPaymentMethod = payload.payment_method.type; // API v2
     } else if (payload?.payment_channel) {
         rawPaymentMethod = payload.payment_channel;
     } else if (payload?.channel_code) {
         rawPaymentMethod = payload.channel_code;
-    } else if (event === "qr.payment") {
-        rawPaymentMethod = "QRIS";
     }
     
     const paymentMethod = String(rawPaymentMethod).toUpperCase();
 
-    // 2. PERBAIKAN: Tambahkan "COMPLETED" untuk mendeteksi pembayaran QRIS yang sukses
+    // Tentukan Status untuk Database Kita
     let paymentStatus = "UNPAID";
     let orderStatus = "PENDING";
 
@@ -66,7 +67,9 @@ export async function POST(request: Request) {
       orderStatus = "CANCELLED";
     }
 
-    // Resolve order berdasarkan external_id atau invoice id
+    // ----------------------------------------------------------------
+    // 3. CARI ORDER DI DATABASE
+    // ----------------------------------------------------------------
     const order = await prisma.order.findFirst({
       where: {
         OR: [
@@ -74,27 +77,141 @@ export async function POST(request: Request) {
           invoiceId ? { xenditInvoiceId: String(invoiceId) } : undefined,
         ].filter(Boolean) as any,
       },
-      select: { id: true },
+      include: {
+        user: true,
+        items: {
+          include: {
+            variant: { include: { product: true } }
+          }
+        }
+      }
     });
 
     if (!order) {
-      console.error("Xendit webhook: order not found", { event, invoiceId, externalId, status });
+      console.error("Order not found for:", { invoiceId, externalId });
       return NextResponse.json({ message: "Order not found" }, { status: 404 });
     }
 
-    // Update database
+    // Ambil tracking number yang sudah ada (jika ada)
+    let trackingNumber = order.trackingNumber;
+
+    // ----------------------------------------------------------------
+    // 4. INTEGRASI BITESHIP (BUAT RESI OTOMATIS)
+    // ----------------------------------------------------------------
+    // Hanya jalan jika status PAID dan belum ada resi
+    if (paymentStatus === "PAID" && !trackingNumber) {
+      try {
+        console.log(`[Biteship] Attempting creation for Order: ${order.id}`);
+        
+        const shippingAddress = typeof order.shippingAddress === 'string' 
+          ? JSON.parse(order.shippingAddress) 
+          : order.shippingAddress;
+
+        // --- A. COURIER MAPPING (THE FIX) ---
+        // Menggunakan data langsung dari order (yang sudah diset saat checkout)
+        
+        let courierCompany = order.courier || "jne"; // Default fallback
+        let courierType = order.shippingService || "reg"; // Default fallback
+        
+        // Jika formatnya masih "company - type" (legacy support)
+        if (courierCompany.includes("-")) {
+            const parts = courierCompany.split("-");
+            courierCompany = parts[0].trim();
+            if (parts.length > 1 && !order.shippingService) {
+                courierType = parts[1].trim(); 
+            }
+        }
+
+        // --- B. ITEM FORMATTING ---
+        const biteshipItems = order.items.map(item => ({
+            name: `${item.variant.product.name} - ${item.variant.volume || ''}ml`,
+            description: "Perfume", // Mandatory field
+            value: Number(item.price || 0), // Convert Decimal to Number
+            quantity: item.quantity,
+            weight: item.variant.weight ? Number(item.variant.weight) : 200 // Default 200g
+        }));
+
+        // --- C. COORDINATE VALIDATION ---
+        const destLat = shippingAddress.latitude ? parseFloat(shippingAddress.latitude) : null;
+        const destLong = shippingAddress.longitude ? parseFloat(shippingAddress.longitude) : null;
+
+        // --- D. BUILD PAYLOAD ---
+        const biteshipPayload: any = {
+          shipper_contact_name: "Lueurs Official",
+          shipper_contact_phone: "081234567890",
+          shipper_contact_email: "hello@lueurs.com",
+          shipper_organization: "Lueurs",
+          origin_contact_name: "Lueurs Official",
+          origin_contact_phone: "081234567890",
+          origin_address: "Jl. Toko Lueurs No. 1, Jakarta",
+          origin_postal_code: 12345, // Pastikan sesuai koordinat toko
+          origin_coordinate: {
+            latitude: -6.200000,
+            longitude: 106.816666
+          },
+          destination_contact_name: order.user.name || "Customer",
+          destination_contact_phone: shippingAddress.phone || "081234567891",
+          destination_contact_email: order.user.email || "customer@example.com",
+          destination_address: shippingAddress.street || shippingAddress.address || "Alamat detail",
+          destination_postal_code: parseInt(shippingAddress.postalCode) || 0,
+          destination_note: shippingAddress.note || "Order from Lueurs",
+          courier_company: courierCompany,
+          courier_type: courierType, // Menggunakan hasil mapping
+          delivery_type: "now",
+          items: biteshipItems
+        };
+
+        // Inject coordinate hanya jika valid
+        if (destLat && destLong) {
+            biteshipPayload.destination_coordinate = {
+                latitude: destLat,
+                longitude: destLong
+            };
+        }
+
+        console.log(`[Biteship] Sending payload with courier: ${courierCompany} (${courierType})`);
+
+        // --- E. SEND REQUEST ---
+        const biteshipResponse = await fetch("https://api.biteship.com/v1/orders", {
+          method: "POST",
+          headers: {
+            "Authorization": process.env.BITESHIP_API_KEY || "",
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(biteshipPayload)
+        });
+
+        const biteshipData = await biteshipResponse.json();
+
+        if (biteshipResponse.ok && biteshipData.success) {
+          trackingNumber = biteshipData.courier?.waybill_id || biteshipData.id;
+          console.log(">>> SUCCESS: Biteship Order Created:", trackingNumber);
+        } else {
+          console.error(">>> FAILED: Biteship Error:", JSON.stringify(biteshipData));
+          // Note: Kita TIDAK throw error agar status di DB tetap terupdate jadi PAID
+        }
+      } catch (biteshipError) {
+        console.error(">>> ERROR: Exception in Biteship Logic:", biteshipError);
+      }
+    }
+
+    // ----------------------------------------------------------------
+    // 5. UPDATE DATABASE FINAL
+    // ----------------------------------------------------------------
     await prisma.order.update({
       where: { id: order.id },
       data: {
         paymentStatus: paymentStatus as any,
         status: orderStatus as any,
         paymentMethod: paymentMethod,
+        trackingNumber: trackingNumber // Null jika gagal, Terisi jika sukses
       },
     });
 
-    return NextResponse.json({ message: "OK" });
-  } catch (error) {
-    console.error("Xendit webhook error:", error);
+    return NextResponse.json({ message: "OK", tracking: trackingNumber });
+
+  } catch (error: any) {
+    console.error("Xendit webhook critical error:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

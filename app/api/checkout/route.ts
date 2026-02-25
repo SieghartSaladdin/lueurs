@@ -13,7 +13,7 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { items, shippingAddress, shippingCost, courier } = body;
+    const { items, shippingAddress, shippingCost, courier, shippingService } = body;
 
     if (!items || items.length === 0 || !shippingAddress || shippingCost === undefined) {
       return NextResponse.json({ message: "Invalid request data" }, { status: 400 });
@@ -53,8 +53,9 @@ export async function POST(request: Request) {
         status: "PENDING",
         paymentMethod: "XENDIT_INVOICE",
         shippingCost,
-        courier,
-        shippingAddress,
+        courier: courier, // Simpan kode kurir (misal: jne)
+        shippingService: shippingService, // Simpan kode layanan (misal: reg)
+        shippingAddress: JSON.stringify(shippingAddress), // Pastikan disimpan sebagai string JSON
         totalAmount,
         items: {
           create: orderItems.map((item) => ({
@@ -106,8 +107,12 @@ export async function POST(request: Request) {
       invoiceUrl: invoice.invoiceUrl,
       orderId: order.id,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Checkout error:", error);
-    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Internal server error", 
+      error: error.message || String(error),
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    }, { status: 500 });
   }
 }
